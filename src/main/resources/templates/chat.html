@@ -2,10 +2,106 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Real-Time Chat Application </title>
+    <title>Real-Time Chat Application</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.1/stomp.min.js" xintegrity="sha512-3oQWoNlW9RP9o2+96hX4A6/OVlAlxt3IEkm1Ud0rmLGYHpCKhpj8uxzw7DeizBMp1LOmc2nu/XbycibXuspSsw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </head>
 <body>
-<H1>Real-Time Chat Application </H1>
+
+<div class="container py-4">
+    <div class="card shadow-lg border-0 rounded-4 mx-auto" style="max-width: 500px;">
+        <div class="card-header text-center bg-primary text-white p-4 rounded-top-4">
+            <h1 class="h3 font-weight-bold mb-0">Real-Time Chat Application</h1>
+        </div>
+        <div class="card-body p-4">
+            <div id="chat" class="border rounded-3 p-3 mb-3 bg-light" style="height: 300px; overflow-y: auto;">
+                <!-- Messages will be displayed here -->
+            </div>
+
+            <!-- Name input group -->
+            <div class="mb-3">
+                <label for="send-message" class="form-label text-muted">Your Name</label>
+                <input id="send-message" type="text" class="form-control rounded-pill" placeholder="Type your name here">
+            </div>
+
+            <!-- Message input and send button group -->
+            <div class="input-group">
+                <input id="messageInput" type="text" class="form-control rounded-start-pill" placeholder="Type your message here">
+                <button id="SendMessage" class="btn btn-primary rounded-end-pill">
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+
+    // Disables the send button if the WebSocket is not connected.
+    function setConnected(connected) {
+        document.getElementById('SendMessage').disabled = !connected;
+    }
+
+    // Connects to the WebSocket endpoint.
+    function connect() {
+        var socket = new SockJS('http://localhost:8080/chat');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function (frame) {
+            setConnected(true);
+            console.log('Connected: ' + frame);
+            // Subscribe to the public topic to receive new messages.
+            stompClient.subscribe('/topic/messages', function (message) {
+                showMessage(JSON.parse(message.body));
+            });
+        });
+    }
+
+    // Appends a new message to the chat display.
+    function showMessage(message) {
+        var chat = document.getElementById('chat');
+        var messageElement = document.createElement('div');
+        messageElement.textContent = message.sender + ': ' + message.content;
+        // Use Bootstrap classes for styling messages
+        messageElement.className = "mb-2 p-2 rounded-2 border shadow-sm";
+        chat.appendChild(messageElement);
+        // Automatically scrolls to the bottom of the chat box.
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Sends a message to the server via WebSocket.
+    function sendMessage() {
+        var sender = document.getElementById('send-message').value;
+        var content = document.getElementById('messageInput').value;
+        if (sender && content) {
+            var chatMessage = {
+                sender: sender,
+                content: content,
+            };
+            stompClient.send("/app/SendMessage", {}, JSON.stringify(chatMessage));
+            // Clear the message input after sending.
+            document.getElementById('messageInput').value = '';
+        } else {
+            console.log("Please enter your name and a message.");
+        }
+    }
+
+    // Assigns the 'sendMessage' function to the button's click event.
+    document.getElementById('SendMessage').onclick = sendMessage;
+
+    // Connect to the WebSocket when the page loads.
+    window.onload = connect;
+</script>
 
 </body>
 </html>
